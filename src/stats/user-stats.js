@@ -30,4 +30,5 @@ class UserStats{
 
 }
 
-module.exports = UserStats;
+export default UserStats;
+

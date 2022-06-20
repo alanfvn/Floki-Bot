@@ -1,13 +1,13 @@
-const {Client, Intents} = require('discord.js');
-const {regCommands, regEvents} = require('./constructors/DsMan');
-const {loadNades} = require('./nades/nade-util');
+import 'dotenv/config.js'
+import {Client, Intents} from 'discord.js'
+import registerLogic from './constructors/ds-man.js';
+import {loadNades} from './nades/nade-util.js';
 
-const bot_tk = process.env.bot_token;
 const client = new Client({
     intents: [
         Intents.FLAGS.GUILDS,
         Intents.FLAGS.GUILD_MESSAGES
-    ]   
+    ] 
 });
 
 
@@ -17,9 +17,8 @@ async function initBot(){
     client.events = new Map();
 
     await loadNades();
-    await regEvents(client);
-    await regCommands(client);
-    await client.login(bot_tk);
+    await registerLogic(client);
+    await client.login(process.env.BOT_TOKEN);
 }
 
 initBot();

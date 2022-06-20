@@ -4,4 +4,4 @@ class DsEvent{
     }
 }
 
-module.exports = DsEvent;
+export default DsEvent;

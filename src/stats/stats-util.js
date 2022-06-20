@@ -1,45 +1,61 @@
-const axios = require("axios").default;
-const UserStats = require('./UserStats');
-const steam_key = process.env.steam_api_key;
+import axios from 'axios'
+import UserStats from './user-stats.js'
 
+const SKEY = process.env.STEAM_KEY;
+const SAPI = axios.create({baseURL: 'http://api.steampowered.com'})
+const SIDPattern = new RegExp(/7656[0-9]{13}/);
+const SUPattern = new RegExp(/[A-Za-z0-9_]{3,32}/);
+
+
+async function performGet(endpoint){
+    let resp;
+    try{
+	resp = await SAPI.get(endpoint);
+    }catch (err){
+	//console.log(err);
+    }
+    return resp;
+}
 
 async function getSteamId(user){
 
-    const resp = await axios.get(`http://api.steampowered.com/ISteamUser/ResolveVanityURL/v0001/?key=${steam_key}&vanityurl=${user}`);
-    let sid = null;
-
-    if(resp.status === 200){
-        const data = resp.data;
-        sid  = data.response.steamid ?? null;
+    if(SIDPattern.test(user)){
+	//they passed a steamid don't make the request.
+	return user;
     }
 
-    return sid;
+    if (!SUPattern.test(user)){
+	//neither a correct steamid or steamuser, don't make the request.
+	return null;
+    }
+
+    const resp = await performGet(`/ISteamUser/ResolveVanityURL/v0001/?key=${SKEY}&vanityurl=${user}`)
+    const {status, data} = resp || {};
+
+    if(status !== 200){
+	return null;
+    }
+    
+    return data.response.steamid ?? null;
 }
 
-async function getStats(user){
-
+async function getStats(user){  
     const stid = await getSteamId(user);
-    let resp = null;
 
-    if(stid === null){
-        return null;
+    if(!stid){
+	return null;
     }
 
-    try{
-        resp = await axios.get(`https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v0002/?appid=730&key=${steam_key}&steamid=${stid}`);
-    }catch(err){
-
+    const resp = await performGet(`/ISteamUserStats/GetUserStatsForGame/v0002/?appid=730&key=${SKEY}&steamid=${stid}`)   
+    const {status, data} = resp || {};
+    
+    if(status !== 200){
+	return null;
     }
-
-    if(resp?.status === 200){
-        const data = resp.data.playerstats.stats
-        const stats = data.reduce((a,x) => ({...a, [x.name]: x.value}), {});  //steam weird ass json response....
-        return new UserStats(stats);
-    }
-
-    return null;
+    //steam weird ass json response....
+    const stats = data.playerstats.stats.reduce((a,x) => ({...a, [x.name]: x.value}), {});  
+    return new UserStats(stats);
 }
 
-module.exports = {
-    getStats,
-}
+
+export default getStats
